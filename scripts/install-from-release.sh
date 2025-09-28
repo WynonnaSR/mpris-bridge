@@ -37,7 +37,12 @@ tar -xzf "$tmpdir/mpris-bridge.tar.gz" -C "$tmpdir/unpack"
 mkdir -p "$BIN_DIR" "$UNIT_DIR"
 install -Dm755 "$tmpdir/unpack/mpris-bridged"  "${BIN_DIR}/mpris-bridged"
 install -Dm755 "$tmpdir/unpack/mpris-bridgec" "${BIN_DIR}/mpris-bridgec"
-install -Dm644 "packaging/systemd/mpris-bridged.service" "${UNIT_DIR}/mpris-bridged.service"
+unit_url="https://raw.githubusercontent.com/${REPO}/main/packaging/systemd/mpris-bridged.service"
+if ! curl -fsSL "$unit_url" -o "${UNIT_DIR}/mpris-bridged.service"; then
+  echo "Error: could not fetch unit file from $unit_url" >&2
+  exit 1
+fi
+
 
 systemctl --user daemon-reload
 systemctl --user enable --now mpris-bridged
