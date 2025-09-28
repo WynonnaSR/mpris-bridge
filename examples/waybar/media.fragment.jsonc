@@ -1,0 +1,13 @@
+{
+  "custom/media": {
+    "format": "{}",
+    "tooltip": false,
+    "max-length": 40,
+    "exec": "mpris-bridgec watch --truncate 80 --pango-escape",
+    "on-click":        "mpris-bridgec play-pause",
+    "on-click-right":  "mpris-bridgec next",
+    "on-click-middle": "mpris-bridgec previous",
+    "on-scroll-up":    "mpris-bridgec seek 5",
+    "on-scroll-down":  "mpris-bridgec seek -5"
+  }
+}

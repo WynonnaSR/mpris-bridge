@@ -1,0 +1,18 @@
+# Rust/Cargo
+/target
+**/*.rs.bk
+
+# Release artifacts
+/dist
+
+# Editors/OS
+.DS_Store
+.idea/
+.vscode/
+
+# Local examples/configs that shouldn't be committed (if generated locally)
+# Uncomment if these are not meant to be tracked:
+# /.config/mpris-bridge/config.toml
+
+# Repo-specific
+project-prewiev.txt

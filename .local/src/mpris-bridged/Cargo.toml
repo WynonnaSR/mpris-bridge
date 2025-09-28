@@ -1,0 +1,27 @@
+[package]
+name = "mpris-bridge"
+version = "0.3.3"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+tokio = { version = "1.39", features = ["rt-multi-thread", "macros", "process", "time", "fs", "io-util", "signal", "sync", "net"] }
+dirs = "5.0"
+regex = "1.11"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+bytes = "1.6"
+sha1 = "0.10"
+nix = { version = "0.29", default-features = false, features = ["user"] }
+zbus = { version = "3.15", default-features = false, features = ["tokio"] }
+futures-util = "0.3"
+
+[[bin]]
+name = "mpris-bridged"
+path = "src/main.rs"
+
+[[bin]]
+name = "mpris-bridgec"
+path = "src/bin/mpris-bridgec.rs"

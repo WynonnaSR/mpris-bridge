@@ -1,0 +1,28 @@
+;; Listen the mpris-bridge event stream (JSONL)
+(deflisten mpris-bridge-events
+  :json true
+  :initial "{\"name\":\"\",\"title\":\"\",\"artist\":\"\",\"status\":\"\",\"position\":0,\"positionStr\":\"0:00\",\"length\":0,\"lengthStr\":\"0:00\",\"thumbnail\":\"$HOME/.config/eww/scripts/cover.png\",\"canNext\":0,\"canPrev\":0}"
+  "sh -lc 'tail -n0 -F \"$XDG_RUNTIME_DIR/mpris-bridge/events.jsonl\"'")
+
+;; Controls -> CLI
+(button
+  :class {mpris-bridge-events.canPrev == 1 ? "back-btn" : "back-btn disabled"}
+  :onclick "mpris-bridgec previous --player ${mpris-bridge-events.name}"
+  "󰒮")
+
+(button
+  :class "play-btn"
+  :onclick "mpris-bridgec play-pause --player ${mpris-bridge-events.name}"
+  {mpris-bridge-events.status == "Playing" ? "󰓛" : "󰐊"})
+
+(button
+  :class {mpris-bridge-events.canNext == 1 ? "next-btn" : "next-btn disabled"}
+  :onclick "mpris-bridgec next --player ${mpris-bridge-events.name}"
+  "󰒭")
+
+(scale
+  :min 0
+  :max {mpris-bridge-events.length > 0 ? mpris-bridge-events.length : 1}
+  :value {mpris-bridge-events.position}
+  :onchange "mpris-bridgec set-position {} --player ${mpris-bridge-events.name}"
+  :hexpand true)

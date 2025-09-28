@@ -1,0 +1,47 @@
+# mpris-bridged: MPRIS -> unified JSON for eww/waybar
+#
+# HOW TO APPLY CHANGES:
+# - After editing this file, restart the service to reload the config:
+#     systemctl --user restart mpris-bridged
+# - Note: `systemctl --user daemon-reload` only reloads systemd unit files; it does NOT reload this config.
+# - Path variables ($HOME, $XDG_CACHE_HOME, $XDG_RUNTIME_DIR) are expanded at daemon startup.
+# - Changing [art].cache_dir does not migrate or clean old files automatically. To prune old cache manually:
+#     rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/mpris-bridge/art"/*
+#
+# Tips:
+# - Waybar text escaping: use `mpris-bridgec watch --pango-escape` in your Waybar module.
+# - Event stream location: $XDG_RUNTIME_DIR/mpris-bridge/events.jsonl
+# - IPC socket:          $XDG_RUNTIME_DIR/mpris-bridge/mpris-bridge.sock
+
+[selection]
+priority        = ["firefox", "spotify", "vlc", "mpv"]
+prefer_focused  = true
+remember_last   = true
+fallback        = "any"   # "any" | "none"
+
+[mpris]
+include         = []      # empty = all
+exclude         = []
+debounce_ms     = 120
+position_tick_ms = 500
+
+[art]
+enabled         = true
+download_http   = true
+timeout_ms      = 5000
+cache_dir       = "$XDG_CACHE_HOME/mpris-bridge/art"
+default_image   = "$HOME/.config/eww/scripts/cover.png"
+current_path    = "$HOME/.config/eww/image.jpg"
+use_symlink     = false
+
+[output]
+snapshot_path   = "$XDG_RUNTIME_DIR/mpris-bridge/state.json"
+events_path     = "$XDG_RUNTIME_DIR/mpris-bridge/events.jsonl"
+pretty_snapshot = false
+
+[presentation]
+truncate_title  = 120
+truncate_artist = 120
+
+[logging]
+level           = "warn"
