@@ -94,10 +94,28 @@ rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/mpris-bridge/art"/*
 
 ## Configuration
 
-Path: `~/.config/mpris-bridge/config.toml`
+- Path: `~/.config/mpris-bridge/config.toml`
+- Example: `examples/config/config.toml`
+- Apply changes by restarting the service:
+```bash
+systemctl --user restart mpris-bridged
+```
 
 ```toml
 # mpris-bridged: MPRIS -> unified JSON for eww/waybar
+#
+# HOW TO APPLY CHANGES:
+# - After editing this file, restart the service to reload the config:
+#     systemctl --user restart mpris-bridged
+# - Note: `systemctl --user daemon-reload` only reloads systemd unit files; it does NOT reload this config.
+# - Path variables ($HOME, $XDG_CACHE_HOME, $XDG_RUNTIME_DIR) are expanded at daemon startup.
+# - Changing [art].cache_dir does not migrate or clean old files automatically. To prune old cache manually:
+#     rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/mpris-bridge/art"/*
+#
+# Tips:
+# - Waybar text escaping: use `mpris-bridgec watch --pango-escape` in your Waybar module.
+# - Event stream location: $XDG_RUNTIME_DIR/mpris-bridge/events.jsonl
+# - IPC socket:          $XDG_RUNTIME_DIR/mpris-bridge/mpris-bridge.sock
 
 [selection]
 priority        = ["firefox", "spotify", "vlc", "mpv"]
@@ -135,9 +153,15 @@ level           = "warn"
 
 ---
 
-## Systemd unit (user)
+## User unit (systemd --user)
 
-Path: `~/.config/systemd/user/mpris-bridged.service`
+- Unit file in repo: `packaging/systemd/mpris-bridged.service`
+- Enable/start:
+```bash
+install -Dm644 packaging/systemd/mpris-bridged.service "$HOME/.config/systemd/user/mpris-bridged.service"
+systemctl --user daemon-reload
+systemctl --user enable --now mpris-bridged
+```
 
 ```ini
 [Unit]
@@ -157,6 +181,14 @@ WantedBy=default.target
 ```
 
 ---
+
+## Releases
+
+Tag a version (`vX.Y.Z`) to trigger CI builds for:
+- x86_64-unknown-linux-gnu
+<!-- Add more targets if/when you enable them in .github/workflows/release.yml -->
+
+Artifacts: `mpris-bridge-${target}.tar.gz` containing `mpris-bridged` and `mpris-bridgec`.
 
 ## Waybar integration
 
@@ -333,4 +365,4 @@ systemctl --user enable --now mpris-bridge-cache-prune.timer
 
 ## License
 
-MIT (or your preferred license)
+MIT — see [LICENSE](./LICENSE).
