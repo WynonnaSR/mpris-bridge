@@ -42,33 +42,65 @@ Version: 0.3.3
 
 - Runtime: `playerctl`, `systemd` (for `busctl` and user unit), Hyprland `hyprctl` (for focus hints)
 - Build: Rust stable (edition 2021), no OpenSSL dev (reqwest uses rustls)
+- Optional tools for verifying output: `jq` (used in examples to pretty‑print JSON)
 
 ---
 
-## Installation
+## Quick install (from Releases)
 
-1) Build and install
+Installs latest prebuilt binaries and user unit:
+
 ```bash
-cargo build --release
+bash -c 'curl -sSL https://raw.githubusercontent.com/WynonnaSR/mpris-bridge/main/scripts/install-from-release.sh | bash -s -- WynonnaSR/mpris-bridge'
+```
+
+This places:
+- binaries in `~/.local/bin/{mpris-bridged,mpris-bridgec}`
+- user unit in `~/.config/systemd/user/mpris-bridged.service`
+- enables/starts the service
+
+Configure at `~/.config/mpris-bridge/config.toml` (see example below), then:
+
+```bash
+systemctl --user restart mpris-bridged
+```
+
+---
+
+## Build from source
+
+1) Build both binaries:
+
+```bash
+cargo build --release --bin mpris-bridged --bin mpris-bridgec
+```
+
+2) Install:
+
+```bash
 install -Dm755 target/release/mpris-bridged  ~/.local/bin/mpris-bridged
 install -Dm755 target/release/mpris-bridgec ~/.local/bin/mpris-bridgec
 ```
 
-2) Configuration
-- Create `~/.config/mpris-bridge/config.toml` (example below)
+3) User unit (systemd --user):
 
-3) Systemd (user)
-- Create `~/.config/systemd/user/mpris-bridged.service` (example below), then:
+- Unit file in repo: `packaging/systemd/mpris-bridged.service`
+- Enable/start:
+
 ```bash
+install -Dm644 packaging/systemd/mpris-bridged.service "$HOME/.config/systemd/user/mpris-bridged.service"
 systemctl --user daemon-reload
 systemctl --user enable --now mpris-bridged
 systemctl --user status mpris-bridged
 ```
 
-4) Verify runtime
+---
+
+## Verify
+
 ```bash
 ls -l "$XDG_RUNTIME_DIR/mpris-bridge"
-tail -f "$XDG_RUNTIME_DIR/mpris-bridge/events.jsonl" | jq -r
+tail -f "$XDG_RUNTIME_DIR/mpris-bridge/events.jsonl" | jq -r   # (optional jq)
 mpris-bridgec watch --truncate 80 --pango-escape
 ```
 
@@ -181,14 +213,6 @@ WantedBy=default.target
 ```
 
 ---
-
-## Releases
-
-Tag a version (`vX.Y.Z`) to trigger CI builds for:
-- x86_64-unknown-linux-gnu
-<!-- Add more targets if/when you enable them in .github/workflows/release.yml -->
-
-Artifacts: `mpris-bridge-${target}.tar.gz` containing `mpris-bridged` and `mpris-bridgec`.
 
 ## Waybar integration
 
@@ -360,6 +384,16 @@ systemctl --user enable --now mpris-bridge-cache-prune.timer
   - Check D‑Bus: `busctl --user monitor org.mpris.MediaPlayer2.spotify`
 - Art not updating:
   - Ensure `mpris:artUrl` is present and HTTP download is allowed in `[art]`
+
+---
+
+## Releases
+
+Tag a version (`vX.Y.Z`) to trigger CI builds for:
+- x86_64-unknown-linux-gnu
+<!-- Add more targets if/when you enable them in .github/workflows/release.yml -->
+
+Artifacts: `mpris-bridge-${target}.tar.gz` containing `mpris-bridged` and `mpris-bridgec`.
 
 ---
 
