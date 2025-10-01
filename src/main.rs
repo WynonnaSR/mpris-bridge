@@ -44,6 +44,7 @@ use tokio::{
     signal::unix::{signal, SignalKind},
     sync::watch,
     task,
+    time::Instant, // <-- добавлено: используем для дебаунса
 };
 use zbus::{fdo::DBusProxy, Connection, MessageStream, MessageType};
 
@@ -970,11 +971,16 @@ async fn dbus_listener(ctx: Arc<Ctx>) -> Result<()> {
 async fn dbus_main_loop(ctx: Arc<Ctx>) -> Result<()> {
     let conn = Connection::session().await.context("dbus session")?;
 
-    // Subscribe to signals via DBusProxy.add_match (zbus 3.x)
+    // Сузить подписки: только MPRIS-плееры и их свойства на стандартном пути.
     let dbus = DBusProxy::new(&conn).await?;
-    dbus.add_match("type='signal',interface='org.freedesktop.DBus',member='NameOwnerChanged'")
+    // Смена владельцев ТОЛЬКО для имён в пространстве org.mpris.MediaPlayer2.*
+    dbus.add_match("type='signal',interface='org.freedesktop.DBus',member='NameOwnerChanged',arg0namespace='org.mpris.MediaPlayer2'")
         .await?;
-    dbus.add_match("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged'")
+    // Изменения свойств ТОЛЬКО на /org/mpris/MediaPlayer2 для интерфейса Player
+    dbus.add_match("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',path='/org/mpris/MediaPlayer2',arg0='org.mpris.MediaPlayer2.Player'")
+        .await?;
+    // И (реже) для корневого интерфейса org.mpris.MediaPlayer2 (необязательно, но полезно)
+    dbus.add_match("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',path='/org/mpris/MediaPlayer2',arg0='org.mpris.MediaPlayer2'")
         .await?;
 
     let mut stream = MessageStream::from(&conn);
@@ -983,6 +989,12 @@ async fn dbus_main_loop(ctx: Arc<Ctx>) -> Result<()> {
     seed_players(&ctx).await?;
     let init_sel = recompute_selected(&ctx);
     set_selected_and_kick(&ctx, init_sel);
+
+    // Дебаунс тяжёлых операций, выполняем в фоновых задачах
+    let mut last_seed = Instant::now() - Duration::from_secs(3600);
+    let mut last_refresh = Instant::now() - Duration::from_secs(3600);
+    const SEED_DEBOUNCE_MS: u64 = 300;
+    const REFRESH_DEBOUNCE_MS: u64 = 250;
 
     // React to bus signals
     while let Some(msg) = stream.next().await {
@@ -994,21 +1006,40 @@ async fn dbus_main_loop(ctx: Arc<Ctx>) -> Result<()> {
 
         let iface = hdr.interface().ok().flatten().map(|i| i.as_str().to_string());
         let member = hdr.member().ok().flatten().map(|m| m.as_str().to_string());
+        let path = hdr.path().ok().flatten().map(|p| p.as_str().to_string());
 
         match (iface.as_deref(), member.as_deref()) {
             (Some("org.freedesktop.DBus"), Some("NameOwnerChanged")) => {
-                if let Err(e) = seed_players(&ctx).await {
-                    eprintln!("mpris-bridge: seed on NameOwnerChanged failed: {e:#}");
+                // Уже отфильтровано по arg0namespace='org.mpris.MediaPlayer2'
+                if last_seed.elapsed() >= Duration::from_millis(SEED_DEBOUNCE_MS) {
+                    last_seed = Instant::now();
+                    let ctx2 = ctx.clone();
+                    task::spawn(async move {
+                        if let Err(e) = seed_players(&ctx2).await {
+                            eprintln!("mpris-bridge: seed on NameOwnerChanged failed: {e:#}");
+                            return;
+                        }
+                        let new_sel = recompute_selected(&ctx2);
+                        set_selected_and_kick(&ctx2, new_sel);
+                    });
                 }
-                let new_sel = recompute_selected(&ctx);
-                set_selected_and_kick(&ctx, new_sel);
             }
             (Some("org.freedesktop.DBus.Properties"), Some("PropertiesChanged")) => {
-                if let Err(e) = refresh_statuses(&ctx).await {
-                    eprintln!("mpris-bridge: refresh statuses failed: {e:#}");
+                // Уже отфильтровано: path='/org/mpris/MediaPlayer2' и arg0 в add_match
+                if path.as_deref() != Some("/org/mpris/MediaPlayer2") {
+                    continue;
                 }
-                let new_sel = recompute_selected(&ctx);
-                set_selected_and_kick(&ctx, new_sel);
+                if last_refresh.elapsed() >= Duration::from_millis(REFRESH_DEBOUNCE_MS) {
+                    last_refresh = Instant::now();
+                    let ctx2 = ctx.clone();
+                    task::spawn(async move {
+                        if let Err(e) = refresh_statuses(&ctx2).await {
+                            eprintln!("mpris-bridge: refresh statuses failed: {e:#}");
+                        }
+                        let new_sel = recompute_selected(&ctx2);
+                        set_selected_and_kick(&ctx2, new_sel);
+                    });
+                }
             }
             _ => {}
         }
