@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+
+  "permissions": {
+    "allow": [
+      "Bash(cargo build*)",
+      "Bash(cargo check*)",
+      "Bash(cargo clippy*)",
+      "Bash(cargo fmt*)",
+      "Bash(cargo test*)",
+      "Bash(systemctl --user status mpris-bridged*)",
+      "Bash(systemctl --user restart mpris-bridged*)",
+      "Bash(systemctl --user stop mpris-bridged*)",
+      "Bash(systemctl --user start mpris-bridged*)",
+      "Bash(journalctl --user -u mpris-bridged*)",
+      "Bash(playerctl *)",
+      "Bash(busctl --user *)",
+      "Bash(echo *)",
+      "Bash(cat *)",
+      "Bash(ls *)",
+      "Bash(cp target/release/mpris-bridge* ~/.local/bin/*)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(sudo *)"
+    ],
+    "defaultMode": "acceptEdits"
+  },
+
+  "includeGitInstructions": true,
+  "respectGitignore": true
+}
